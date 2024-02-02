@@ -50,3 +50,13 @@ Archivo de **JavaScript** (o **TypeScript**) con el nombre **ProductManager.js**
 - Se llamará al método **getProductById** y se corroborará que devuelva el producto con el **id** especificado, en caso de no existir, debe arrojar un **error**.
 - Se llamará al método **updateProduct** y se intentará cambiar un campo de algún producto, se evaluará que no se elimine el **id** y que sí se haya hecho la actualización.
 - Se llamará al método **deleteProduct**, se evaluará que realmente se elimine el producto o que arroje un error en caso de no existir.
+
+## TypeScript
+
+Instalar:
+
+- npm install -g typescript
+
+- npm install -g ts-node
+
+Luego ejecutar el script con **ts-node script.ts**.

@@ -1,20 +1,20 @@
 interface IdProduct {
-    id: number;
-    code: string;
-    title: string;
-    description: string;
-    price: string;
-    thumbnail: string;
-    stock: string;
+    id: number
+    code: string
+    title: string
+    description: string
+    price: string
+    thumbnail: string
+    stock: string
 }
 
 class Product {
-    code: string;
-    title: string;
-    description: string;
-    price: string;
-    thumbnail: string;
-    stock: string;
+    code: string
+    title: string
+    description: string
+    price: string
+    thumbnail: string
+    stock: string
 
     constructor(code: string,
                 title: string,
