@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "ts-node": "^10.9.2",
+    "typecript": "^0.0.1-security"
+  }
+}
