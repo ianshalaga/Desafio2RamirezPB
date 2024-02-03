@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 interface IdProduct {
     id: number
     code: string
@@ -6,6 +8,7 @@ interface IdProduct {
     price: string
     thumbnail: string
     stock: string
+    [key: string]: string | number // to access with obj[field] form
 }
 
 class Product {
@@ -54,58 +57,189 @@ class Product {
 }
 
 class ProductManager {
+    path: string
     products: IdProduct[]
 
-    constructor(products: IdProduct[] = []) {
+
+    constructor(path: string, products: IdProduct[] = []) {
+        this.path = path
         this.products = products
     }
 
-    static codeBase = 0
 
-    addProduct(code: string,
-               title: string,
-               description: string,
-               price: string,
-               thumbnail: string,
-               stock: string) {
+    static codeBase: number = 0
+
+
+    private generateId(): number {
+        let maxId = 0
+
+        const ids = this.products.map((product) => product.id)
+
+        if (ids.length !== 0)
+            maxId = Math.max(...ids)
+
+        return maxId
+    }
+
+
+    private async readProductsFromFileAsyncPromises(): Promise<void> {
+        try {
+            const data = await fs.promises.readFile(this.path, "utf8")
+            this.products = JSON.parse(data)
+            ProductManager.codeBase = this.generateId()
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Error al cargar los productos desde el archivo: ${error.message}`);
+            } else {
+                throw error
+            }
+        }
+    }
+
+
+    private async writeProductsIntoFileAsyncPromises(): Promise<void> {
+        try {
+            const productsJson = JSON.stringify(this.products, null, 2);
+            await fs.promises.writeFile(this.path, productsJson, 'utf8');
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Error al guardar productos en el archivo: ${error.message}`);
+            } else {
+                throw error
+            }
+        }
+    }
+
+
+    async addProduct(code: string,
+                     title: string,
+                     description: string,
+                     price: string,
+                     thumbnail: string,
+                     stock: string) {
+        // Check for repeated code
         if (this.products.some((element) => code === element.code)) {
             throw new Error("El código del producto que está intentando agregar ya existe. Utilice otro código.")
         }
 
+        // Read data from file
+        await this.readProductsFromFileAsyncPromises()
+
+        // Create new product
         const product = new Product(code, title, description, price, thumbnail, stock)
 
+        // Add an id to product and update products array
         this.products.push(product.addId(++ProductManager.codeBase))
+
+        // Save products array into file
+        await this.writeProductsIntoFileAsyncPromises()        
     }
 
-    getProducts() { return this.products }
 
-    getProductById(id: number) {
+    async getProducts(): Promise<IdProduct[]> {
+        // Load produts from file
+        await this.readProductsFromFileAsyncPromises()
+
+        return this.products
+    }
+    
+
+    async getProductById(id: number) {
+        // Load product from file
+        await this.readProductsFromFileAsyncPromises()
+
         const idProduct = this.products.find((product) => product.id === id)
+
         if (idProduct) {
-            console.log(idProduct)
             return idProduct
         } else {
-            console.log("Producto no encontrado.")
+            throw new Error(`Producto con id ${id} no encontrado.`)
         }
+    }
+
+
+    async updateProduct(id: number, field: string, value: string): Promise<void> {
+        // Load products from file
+        await this.readProductsFromFileAsyncPromises()
+
+        let existProduct = false
+
+        const productsUpdated = this.products.map((product) => {
+            if (product.id === id) {
+                if (field in product) {
+                    product[field] = value
+                    existProduct = true
+                } else {
+                    throw new Error(`Los productos no cuentan con el campo ${field}.`)
+                }
+            }
+            return product
+        })
+
+        if (!existProduct) {
+            throw new Error(`El producto con id igual a ${id} no fue encontrado.`)
+        }
+
+        this.products = productsUpdated
+
+        // Save products into file
+        await this.writeProductsIntoFileAsyncPromises()
+    }
+
+
+    async deleteProduct(id: number): Promise<void> {
+        // Load products from file
+        await this.readProductsFromFileAsyncPromises()
+
+        const productsUpdated: IdProduct[] = []
+        let existProduct = false
+
+        this.products.forEach((product) => {
+            if (product.id !== id) {
+                productsUpdated.push(product)
+            } else {
+                existProduct = true
+            }
+        })
+
+        if (!existProduct) {
+            throw new Error(`El producto con id igual a ${id} no fue encontrado.`)
+        }
+
+        this.products = productsUpdated
+
+        // Save products into file
+        await this.writeProductsIntoFileAsyncPromises()
     }
 }
 
 
 // TESTING
-const productManager = new ProductManager()
+const PATH = "./data.json"
 
-console.log(productManager.getProducts()) // []
+const test = async () => {
+    const productManager = new ProductManager(PATH)
+    
+    let products = await productManager.getProducts()
+    console.log(products)
 
-productManager.addProduct("abc123", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
-productManager.addProduct("abc234", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
-productManager.addProduct("abc345", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
-productManager.addProduct("abc567", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
+    // await productManager.addProduct("abc123", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
+    // await productManager.addProduct("abc234", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
+    // await productManager.addProduct("abc345", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
+    // await productManager.addProduct("abc567", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
+    // await productManager.addProduct("29837489273489", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25")
 
-console.log(productManager.getProducts())
+    // products = await productManager.getProducts()
+    // console.log(products)
 
-productManager.getProductById(1)
-productManager.getProductById(2)
-productManager.getProductById(3)
-productManager.getProductById(4)
+    // const productSearch = await productManager.getProductById(3)
+    // console.log(productSearch)
 
-// console.log(new Product("abc567", "producto prueba", "Este es un producto prueba", "200", "Sin imagen", "25"))
+    // await productManager.updateProduct(2, "stock", "2348729384729834")
+    // await productManager.deleteProduct(2)
+
+    // products = await productManager.getProducts()
+    // console.log(products)
+}
+
+test()
